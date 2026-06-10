@@ -96,7 +96,15 @@ export default function Navbar() {
                 <a
                   key={link.href}
                   href={link.href}
-                  onClick={() => setMenuOpen(false)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const href = link.href;
+                    setMenuOpen(false);
+                    setTimeout(() => {
+                      const target = document.querySelector(href);
+                      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 300);
+                  }}
                   className="text-[#F5F7FA]/70 hover:text-[#7FB0DE] text-sm font-medium py-2.5 px-3 rounded-lg hover:bg-white/5 transition-all"
                 >
                   {link.label}
