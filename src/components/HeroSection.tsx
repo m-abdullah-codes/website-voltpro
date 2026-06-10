@@ -32,12 +32,20 @@ function Lightning({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Render at the device's pixel density (capped at 2x to stay within
+    // mobile GPU memory limits) so the canvas isn't upscaled/pixelated.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const resizeCanvas = () => {
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
+      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
     };
     resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+    resizeObserver.observe(canvas);
 
     const gl = canvas.getContext("webgl");
     if (!gl) {
@@ -53,7 +61,11 @@ function Lightning({
     `;
 
     const fragmentShaderSource = `
+      #ifdef GL_FRAGMENT_PRECISION_HIGH
+      precision highp float;
+      #else
       precision mediump float;
+      #endif
       uniform vec2 iResolution;
       uniform float iTime;
       uniform float uHue;
@@ -183,7 +195,6 @@ function Lightning({
     let frameId = 0;
 
     const render = () => {
-      resizeCanvas();
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(iResolutionLocation, canvas.width, canvas.height);
       gl.uniform1f(iTimeLocation, (performance.now() - startTime) / 1000.0);
@@ -198,7 +209,7 @@ function Lightning({
     frameId = requestAnimationFrame(render);
 
     return () => {
-      window.removeEventListener("resize", resizeCanvas);
+      resizeObserver.disconnect();
       cancelAnimationFrame(frameId);
     };
   }, [hue, xOffset, speed, intensity, size]);
